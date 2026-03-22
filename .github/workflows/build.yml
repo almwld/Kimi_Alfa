@@ -13,14 +13,13 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.0'
+          flutter-version: '3.19.0'
 
       - name: Build
         run: |
           # حفظ الكود
           mkdir /tmp/code
-          cp -r lib pubspec.yaml /tmp/code/
-          cp -r assets /tmp/code/ 2>/dev/null || true
+          cp -r lib /tmp/code/
           
           # حذف كل شيء
           rm -rf android ios
@@ -31,32 +30,39 @@ jobs:
           # استعادة الكود
           rm -rf lib
           cp -r /tmp/code/lib .
-          cp /tmp/code/pubspec.yaml .
-          cp -r /tmp/code/assets . 2>/dev/null || true
           
-          # إنشاء جميع مجلدات assets
-          mkdir -p assets/images assets/icons/svg assets/animations assets/fonts
+          # إنشاء pubspec.yaml بسيط
+          cat > pubspec.yaml << 'YAML'
+          name: kimi_alfa
+          description: Kimi Alfa
+          publish_to: 'none'
+          version: 1.0.0+1
           
-          # إنشاء ملف خط وهمي
-          echo "dummy font" > assets/fonts/Changa-SemiBold.ttf
+          environment:
+            sdk: '>=3.0.0 <4.0.0'
           
-          # إزالة أي سطور fonts من pubspec.yaml
-          sed -i '/fonts:/,/family: Changa/d' pubspec.yaml
+          dependencies:
+            flutter:
+              sdk: flutter
+            cupertino_icons: ^1.0.6
+            provider: ^6.1.1
+            supabase_flutter: ^2.0.0
+          
+          dev_dependencies:
+            flutter_test:
+              sdk: flutter
+            flutter_lints: ^3.0.0
+          
+          flutter:
+            uses-material-design: true
+          YAML
           
           # إضافة flutterEmbedding
           sed -i '/<application>/a \        <meta-data android:name="flutterEmbedding" android:value="2" />' android/app/src/main/AndroidManifest.xml
           
-          # تحديث Kotlin
-          sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.22"/' android/build.gradle
-          
-          # تحديث Gradle
-          echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.9-all.zip" > android/gradle/wrapper/gradle-wrapper.properties
-          
-          # تثبيت الحزم
+          # بناء
           flutter pub get
-          
-          # بناء APK
-          flutter build apk --release --split-per-abi
+          flutter build apk --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
