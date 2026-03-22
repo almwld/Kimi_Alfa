@@ -17,45 +17,24 @@ jobs:
 
       - name: Build
         run: |
-          # حفظ lib فقط
-          mkdir /tmp/lib
-          cp -r lib /tmp/lib/
+          # حفظ الكود بالكامل
+          mkdir /tmp/code
+          cp -r lib pubspec.yaml assets .env .github /tmp/code/ 2>/dev/null || true
           
           # حذف كل شيء
-          rm -rf android ios
+          rm -rf android ios linux macos web windows
           
           # إنشاء مشروع جديد
           flutter create --org com.kimialfa --project-name kimi_alfa .
           
-          # استعادة lib
-          rm -rf lib
-          cp -r /tmp/lib/lib .
+          # استعادة الكود بالكامل
+          cp -r /tmp/code/lib/* lib/
+          cp /tmp/code/pubspec.yaml .
+          cp -r /tmp/code/assets . 2>/dev/null || true
+          cp /tmp/code/.env . 2>/dev/null || true
           
-          # إنشاء pubspec.yaml بدون path_provider والحركات المعقدة
-          cat > pubspec.yaml << 'YAML'
-          name: kimi_alfa
-          description: Kimi Alfa
-          publish_to: 'none'
-          version: 1.0.0+1
-          
-          environment:
-            sdk: ">=3.4.0 <4.0.0"
-          
-          dependencies:
-            flutter:
-              sdk: flutter
-            cupertino_icons: ^1.0.6
-            provider: ^6.1.1
-            supabase_flutter: ^2.0.0
-          
-          dev_dependencies:
-            flutter_test:
-              sdk: flutter
-            flutter_lints: ^3.0.0
-          
-          flutter:
-            uses-material-design: true
-          YAML
+          # إنشاء مجلدات assets المطلوبة
+          mkdir -p assets/images assets/icons/svg assets/animations assets/fonts
           
           # إضافة flutterEmbedding
           sed -i '/<application>/a \        <meta-data android:name="flutterEmbedding" android:value="2" />' android/app/src/main/AndroidManifest.xml
@@ -64,7 +43,7 @@ jobs:
           flutter pub get
           
           # بناء APK
-          flutter build apk --release
+          flutter build apk --release --split-per-abi
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
