@@ -13,14 +13,13 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.0'
+          flutter-version: '3.19.0'
 
       - name: Build
         run: |
           # حفظ الكود
           mkdir /tmp/code
           cp -r lib /tmp/code/
-          cp pubspec.yaml /tmp/code/
           
           # حذف كل شيء
           rm -rf android ios
@@ -31,20 +30,16 @@ jobs:
           # استعادة الكود
           rm -rf lib
           cp -r /tmp/code/lib .
-          cp /tmp/code/pubspec.yaml .
           
-          # إنشاء مجلدات assets
-          mkdir -p assets/images assets/icons/svg assets/animations assets/fonts
-          
-          # إنشاء pubspec.yaml كامل
+          # إنشاء pubspec.yaml بسيط
           cat > pubspec.yaml << 'YAML'
           name: kimi_alfa
-          description: Kimi Alfa Marketplace
+          description: Kimi Alfa
           publish_to: 'none'
           version: 1.0.0+1
 
           environment:
-            sdk: '>=3.4.0 <4.0.0'
+            sdk: '>=3.0.0 <4.0.0'
 
           dependencies:
             flutter:
@@ -52,34 +47,11 @@ jobs:
             cupertino_icons: ^1.0.6
             provider: ^6.1.1
             supabase_flutter: ^2.0.0
-            carousel_slider: ^5.1.2
-            flutter_animate: ^4.5.0
-            flutter_svg: ^2.0.9
-            image_picker: ^1.0.7
-            cached_network_image: ^3.3.1
-            shared_preferences: ^2.2.2
-            intl: ^0.18.1
-            url_launcher: ^6.2.2
-            hive: ^2.2.3
-            hive_flutter: ^1.1.0
-            path_provider: ^2.1.5
-            geolocator: ^11.1.0
-            geocoding: ^3.0.0
-            flutter_map: ^6.1.0
-            latlong2: ^0.9.0
-            flutter_local_notifications: ^17.2.4
-            firebase_core: ^3.12.1
-            firebase_messaging: ^15.2.4
-            flutter_dotenv: ^5.1.0
-            shimmer: ^3.0.0
-            smooth_page_indicator: ^1.1.0
-            flutter_screenutil: ^5.9.0
-            google_fonts: ^6.1.0
 
           dev_dependencies:
             flutter_test:
               sdk: flutter
-            flutter_lints: ^3.0.1
+            flutter_lints: ^3.0.0
 
           flutter:
             uses-material-design: true
@@ -92,56 +64,15 @@ jobs:
           MAP_API_KEY=${{ secrets.MAP_API_KEY }}
           ENV
           
-          # تحديث build.gradle
-          cat > android/build.gradle << 'GRADLE'
-          buildscript {
-              ext.kotlin_version = '1.9.22'
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-              dependencies {
-                  classpath 'com.android.tools.build:gradle:8.3.0'
-                  classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-              }
-          }
-          allprojects {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
-          rootProject.buildDir = '../build'
-          subprojects {
-              project.buildDir = "${rootProject.buildDir}/${project.name}"
-          }
-          subprojects {
-              project.evaluationDependsOn(':app')
-          }
-          tasks.register("clean", Delete) {
-              delete rootProject.buildDir
-          }
-          GRADLE
-          
-          # تحديث app/build.gradle
-          cat >> android/app/build.gradle << 'APP'
-          android {
-              compileOptions {
-                  sourceCompatibility JavaVersion.VERSION_1_8
-                  targetCompatibility JavaVersion.VERSION_1_8
-              }
-          }
-          APP
-          
-          # تحديث gradle-wrapper.properties
-          echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.3-all.zip" > android/gradle/wrapper/gradle-wrapper.properties
+          # تنظيف cache Gradle
+          rm -rf ~/.gradle/caches/
           
           # إضافة flutterEmbedding
           sed -i '/<application>/a \        <meta-data android:name="flutterEmbedding" android:value="2" />' android/app/src/main/AndroidManifest.xml
           
           # بناء
           flutter pub get
-          flutter build apk --release --split-per-abi
+          flutter build apk --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
