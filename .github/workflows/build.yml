@@ -17,11 +17,10 @@ jobs:
 
       - name: Build
         run: |
-          # حفظ الكود الحقيقي
+          # حفظ الكود
           mkdir /tmp/real_code
           cp -r lib /tmp/real_code/
           cp pubspec.yaml /tmp/real_code/ 2>/dev/null || true
-          cp -r assets /tmp/real_code/ 2>/dev/null || true
           
           # حذف كل شيء
           rm -rf .gitignore android ios linux macos web windows
@@ -29,26 +28,17 @@ jobs:
           # إنشاء مشروع Flutter جديد نظيف
           flutter create --org com.kimialfa --project-name kimi_alfa .
           
-          # استعادة الكود الحقيقي
+          # استعادة الكود
           rm -rf lib
           cp -r /tmp/real_code/lib .
           
-          # إنشاء جميع مجلدات assets المطلوبة
+          # إنشاء مجلدات assets
           mkdir -p assets/images assets/icons/svg assets/animations assets/fonts
-          touch assets/images/.gitkeep
-          touch assets/icons/svg/.gitkeep
-          touch assets/animations/.gitkeep
-          touch assets/fonts/.gitkeep
           
-          # إنشاء ملف خط مؤقت إذا لم يكن موجوداً
-          if [ ! -f assets/fonts/Changa-SemiBold.ttf ]; then
-            echo "placeholder" > assets/fonts/Changa-SemiBold.ttf
-          fi
-          
-          # إنشاء pubspec.yaml جديد مع تصحيح المسارات
+          # إنشاء pubspec.yaml بسيط
           cat > pubspec.yaml << 'YAML'
           name: kimi_alfa
-          description: Kimi Alfa Marketplace
+          description: Kimi Alfa
           publish_to: 'none'
           version: 1.0.0+1
 
@@ -61,49 +51,128 @@ jobs:
             cupertino_icons: ^1.0.6
             provider: ^6.1.1
             supabase_flutter: ^2.0.0
-            carousel_slider: ^5.1.2
-            flutter_animate: ^4.5.0
-            flutter_svg: ^2.0.9
-            image_picker: ^1.0.7
-            cached_network_image: ^3.3.1
-            shared_preferences: ^2.2.2
-            intl: ^0.18.1
-            url_launcher: ^6.2.2
-            hive: ^2.2.3
-            hive_flutter: ^1.1.0
-            path_provider: ^2.1.5
-            geolocator: ^11.1.0
-            geocoding: ^3.0.0
-            flutter_map: ^6.1.0
-            latlong2: ^0.9.0
-            flutter_local_notifications: ^17.2.4
-            firebase_core: ^3.12.1
-            firebase_messaging: ^15.2.4
-            flutter_dotenv: ^5.1.0
-            shimmer: ^3.0.0
-            smooth_page_indicator: ^1.1.0
-            flutter_screenutil: ^5.9.0
-            google_fonts: ^6.1.0
 
           dev_dependencies:
             flutter_test:
               sdk: flutter
-            flutter_lints: ^3.0.1
+            flutter_lints: ^3.0.0
 
           flutter:
             uses-material-design: true
             assets:
               - assets/images/
-              - assets/icons/svg/
-              - assets/animations/
-              - assets/fonts/
           YAML
+          
+          # إعادة كتابة build.gradle بالكامل
+          cat > android/build.gradle << 'GRADLE'
+          buildscript {
+              ext.kotlin_version = '1.7.1'
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:7.4.0'
+                  classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+              }
+          }
+
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+
+          rootProject.buildDir = '../build'
+          subprojects {
+              project.buildDir = "${rootProject.buildDir}/${project.name}"
+          }
+          subprojects {
+              project.evaluationDependsOn(':app')
+          }
+
+          tasks.register("clean", Delete) {
+              delete rootProject.buildDir
+          }
+          GRADLE
+          
+          # إعادة كتابة app/build.gradle
+          cat > android/app/build.gradle << 'APP'
+          def localProperties = new Properties()
+          def localPropertiesFile = rootProject.file('local.properties')
+          if (localPropertiesFile.exists()) {
+              localPropertiesFile.withReader('UTF-8') { reader ->
+                  localProperties.load(reader)
+              }
+          }
+
+          def flutterRoot = localProperties.getProperty('flutter.sdk')
+          if (flutterRoot == null) {
+              throw new GradleException("Flutter SDK not found.")
+          }
+
+          def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
+          if (flutterVersionCode == null) {
+              flutterVersionCode = '1'
+          }
+
+          def flutterVersionName = localProperties.getProperty('flutter.versionName')
+          if (flutterVersionName == null) {
+              flutterVersionName = '1.0'
+          }
+
+          apply plugin: 'com.android.application'
+          apply plugin: 'kotlin-android'
+          apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
+
+          android {
+              compileSdk 34
+              ndkVersion flutter.ndkVersion
+
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_1_8
+                  targetCompatibility JavaVersion.VERSION_1_8
+              }
+
+              kotlinOptions {
+                  jvmTarget = '1.8'
+              }
+
+              sourceSets {
+                  main.java.srcDirs += 'src/main/kotlin'
+              }
+
+              defaultConfig {
+                  applicationId "com.kimialfa.kimi_alfa"
+                  minSdk 21
+                  targetSdk 34
+                  versionCode flutterVersionCode.toInteger()
+                  versionName flutterVersionName
+              }
+
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.debug
+                  }
+              }
+          }
+
+          flutter {
+              source '../..'
+          }
+
+          dependencies {
+              implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+          }
+          APP
+          
+          # تحديث gradle wrapper
+          echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-7.6-all.zip" > android/gradle/wrapper/gradle-wrapper.properties
           
           # إضافة flutterEmbedding
           sed -i '/<application>/a \        <meta-data android:name="flutterEmbedding" android:value="2" />' android/app/src/main/AndroidManifest.xml
-          
-          # تحديث Kotlin
-          sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.22"/' android/build.gradle
           
           # تثبيت الحزم
           flutter pub get
