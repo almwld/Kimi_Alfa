@@ -13,7 +13,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0'
+          flutter-version: '3.22.0'
 
       - name: Build
         run: |
@@ -31,7 +31,7 @@ jobs:
           rm -rf lib
           cp -r /tmp/code/lib .
           
-          # إنشاء pubspec.yaml بسيط
+          # إنشاء pubspec.yaml بسيط مع الحزم الأساسية
           cat > pubspec.yaml << 'YAML'
           name: kimi_alfa
           description: Kimi Alfa
@@ -39,7 +39,7 @@ jobs:
           version: 1.0.0+1
           
           environment:
-            sdk: '>=3.0.0 <4.0.0'
+            sdk: '>=3.4.0 <4.0.0'
           
           dependencies:
             flutter:
@@ -47,6 +47,10 @@ jobs:
             cupertino_icons: ^1.0.6
             provider: ^6.1.1
             supabase_flutter: ^2.0.0
+            path_provider: ^2.0.0
+            shared_preferences: ^2.0.0
+            url_launcher: ^6.0.0
+            intl: ^0.18.0
           
           dev_dependencies:
             flutter_test:
@@ -56,6 +60,9 @@ jobs:
           flutter:
             uses-material-design: true
           YAML
+          
+          # تحديث Kotlin
+          sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.22"/' android/build.gradle
           
           # إضافة flutterEmbedding
           sed -i '/<application>/a \        <meta-data android:name="flutterEmbedding" android:value="2" />' android/app/src/main/AndroidManifest.xml
