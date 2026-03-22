@@ -1,41 +1,61 @@
-name: Build Flex Yemen
+name: Build Flx
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
     branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.0'
+          flutter-version: '3.22.0'   # إصدار ثابت ومتوافق مع path_provider
+
+      - name: Create fresh Flutter project
+        run: |
+          mkdir -p /tmp/fresh
+          cd /tmp/fresh
+          flutter create --org com.flexyemen --project-name fresh_project .
+          cd $GITHUB_WORKSPACE
+          cp -r lib /tmp/fresh/
+          cp -r assets /tmp/fresh/ 2>/dev/null || true
+          cp pubspec.yaml /tmp/fresh/
+          cp .env /tmp/fresh/ 2>/dev/null || true
+          rm -rf lib assets pubspec.yaml .env android ios
+          cp -r /tmp/fresh/. .
+          rm -rf /tmp/fresh
+
+      - name: Prepare assets and fix fonts
+        run: |
+          # إنشاء مجلدات assets المطلوبة لتجنب أخطاء "asset not found"
+          mkdir -p assets/images assets/icons/svg assets/animations assets/fonts
+          # حذف قسم fonts من pubspec.yaml (لأن الخط قد لا يكون موجوداً في المسار الصحيح)
+          sed -i '/fonts:/,/family: Changa/d' pubspec.yaml
+
+      - name: Update AGP version
+        run: |
+          if [ -f android/settings.gradle ]; then
+            sed -i 's/id "com.android.application" version "8.1.0"/id "com.android.application" version "8.1.1"/g' android/settings.gradle
+            echo "✅ Updated AGP to 8.1.1"
+          else
+            echo "⚠️ android/settings.gradle not found"
+          fi
+
+      - name: Set app name
+        run: |
+          sed -i 's/android:label="fresh_project"/android:label="Flex Yemen Market"/g' android/app/src/main/AndroidManifest.xml
 
       - name: Get dependencies
         run: flutter pub get
 
-      - name: Prepare assets and fix pubspec
-        run: |
-          # إنشاء مجلدات الأصول المطلوبة
-          mkdir -p assets/images assets/icons/svg assets/animations assets/fonts
-          
-          # إزالة قسم fonts من pubspec.yaml (لأن الملف غير موجود)
-          sed -i '/fonts:/,/family: Changa/d' pubspec.yaml
-          
-          # إضافة flutterEmbedding إلى AndroidManifest.xml
-          sed -i '/<application>/a \        <meta-data android:name="flutterEmbedding" android:value="2" />' android/app/src/main/AndroidManifest.xml
-
-      - name: Build Android APK
+      - name: Build APK (split-per-abi)
         run: flutter build apk --release --split-per-abi
 
-      - name: Upload APK
+      - name: Upload APKs
         uses: actions/upload-artifact@v4
         with:
           name: app-release
