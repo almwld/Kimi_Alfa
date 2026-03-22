@@ -20,6 +20,7 @@ jobs:
         run: |
           mkdir /tmp/code
           cp -r lib /tmp/code/
+          if [ -d assets ]; then cp -r assets /tmp/code/; fi
 
       - name: Clean and recreate project
         run: |
@@ -27,13 +28,15 @@ jobs:
           flutter create --org com.kimialfa --project-name kimi_alfa .
 
       - name: Restore code
-        run: cp -r /tmp/code/lib/* lib/
+        run: |
+          cp -r /tmp/code/lib/* lib/
+          if [ -d /tmp/code/assets ]; then cp -r /tmp/code/assets/* assets/; fi
 
-      - name: Create pubspec.yaml
+      - name: Create complete pubspec.yaml with all dependencies
         run: |
           cat > pubspec.yaml << 'YAML'
           name: kimi_alfa
-          description: Kimi Alfa
+          description: Kimi Alfa - Yemeni E-Commerce Platform
           publish_to: 'none'
           version: 1.0.0+1
 
@@ -43,14 +46,73 @@ jobs:
           dependencies:
             flutter:
               sdk: flutter
+            cupertino_icons: ^1.0.6
+            provider: ^6.1.1
+            supabase_flutter: ^2.0.0
+            carousel_slider: ^5.1.2
+            flutter_animate: ^4.5.0
+            flutter_svg: ^2.0.9
+            image_picker: ^1.0.7
+            cached_network_image: ^3.3.1
+            shared_preferences: ^2.2.2
+            intl: ^0.18.1
+            url_launcher: ^6.2.2
+            hive: ^2.2.3
+            hive_flutter: ^1.1.0
+            path_provider: ^2.1.5
+            geolocator: ^11.1.0
+            geocoding: ^3.0.0
+            flutter_map: ^6.1.0
+            latlong2: ^0.9.0
+            flutter_local_notifications: ^17.2.4
+            firebase_core: ^3.12.1
+            firebase_messaging: ^15.2.4
+            flutter_dotenv: ^5.1.0
+            shimmer: ^3.0.0
+            smooth_page_indicator: ^1.1.0
+            flutter_screenutil: ^5.9.0
+            google_fonts: ^6.1.0
 
           dev_dependencies:
             flutter_test:
               sdk: flutter
+            flutter_lints: ^3.0.1
 
           flutter:
             uses-material-design: true
+            fonts:
+              - family: Changa
+                fonts:
+                  - asset: assets/fonts/Changa-SemiBold.ttf
+                    weight: 600
+            assets:
+              - assets/images/
+              - assets/icons/svg/
+              - assets/animations/
+              - .env
           YAML
+
+      - name: Create asset directories and dummy files
+        run: |
+          mkdir -p assets/images assets/icons/svg assets/animations assets/fonts
+          echo "test" > assets/images/.gitkeep
+          echo "test" > assets/icons/svg/.gitkeep
+          echo "test" > assets/animations/.gitkeep
+          echo "test" > assets/fonts/.gitkeep
+          echo "SUPABASE_URL=https://example.com" > .env
+          echo "SUPABASE_ANON_KEY=test-key" >> .env
+
+      - name: Fix gradle version
+        run: |
+          echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.9-all.zip" > android/gradle/wrapper/gradle-wrapper.properties
+
+      - name: Add desugaring
+        run: |
+          sed -i '/android {/a \    compileOptions {\n        sourceCompatibility JavaVersion.VERSION_1_8\n        targetCompatibility JavaVersion.VERSION_1_8\n        coreLibraryDesugaringEnabled true\n    }' android/app/build.gradle
+          sed -i '/dependencies {/a \    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"' android/app/build.gradle
+
+      - name: Get dependencies
+        run: flutter pub get
 
       - name: Build APK
         run: flutter build apk --release --split-per-abi
