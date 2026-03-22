@@ -7,7 +7,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -16,113 +15,28 @@ jobs:
         with:
           flutter-version: '3.22.0'
 
-      - name: Save user code
+      - name: Build
         run: |
-          mkdir /tmp/code
-          cp -r lib /tmp/code/
-          if [ -d assets ]; then cp -r assets /tmp/code/; fi
+          # 1. حفظ الكود (lib و pubspec.yaml)
+          mkdir /tmp/my_code
+          cp -r lib /tmp/my_code/
+          cp pubspec.yaml /tmp/my_code/
 
-      - name: Clean and recreate project
-        run: |
-          rm -rf android ios linux macos web windows .gitignore
+          # 2. حذف مجلد android القديم نهائياً
+          rm -rf android ios linux macos web windows
+
+          # 3. إنشاء مشروع جديد (سيُنشئ android بإعدادات نظيفة)
           flutter create --org com.kimialfa --project-name kimi_alfa .
 
-      - name: Restore code
-        run: |
-          cp -r /tmp/code/lib/* lib/
-          if [ -d /tmp/code/assets ]; then cp -r /tmp/code/assets/* assets/; fi
+          # 4. استعادة الكود الخاص بك
+          cp -r /tmp/my_code/lib/* lib/
+          cp /tmp/my_code/pubspec.yaml .
 
-      - name: Create pubspec.yaml
-        run: |
-          cat > pubspec.yaml << 'YAML'
-          name: kimi_alfa
-          description: Kimi Alfa Marketplace
-          publish_to: 'none'
-          version: 1.0.0+1
+          # 5. تثبيت الحزم
+          flutter pub get
 
-          environment:
-            sdk: '>=3.4.0 <4.0.0'
-
-          dependencies:
-            flutter:
-              sdk: flutter
-            cupertino_icons: ^1.0.6
-            provider: ^6.1.1
-            supabase_flutter: ^2.0.0
-            carousel_slider: ^5.1.2
-            flutter_animate: ^4.5.0
-            flutter_svg: ^2.0.9
-            image_picker: ^1.0.7
-            cached_network_image: ^3.3.1
-            shared_preferences: ^2.2.2
-            intl: ^0.18.1
-            url_launcher: ^6.2.2
-            hive: ^2.2.3
-            hive_flutter: ^1.1.0
-            path_provider: ^2.1.5
-            geolocator: ^11.1.0
-            geocoding: ^3.0.0
-            flutter_map: ^6.1.0
-            latlong2: ^0.9.0
-            flutter_local_notifications: ^17.2.4
-            firebase_core: ^3.12.1
-            firebase_messaging: ^15.2.4
-            flutter_dotenv: ^5.1.0
-            shimmer: ^3.0.0
-            smooth_page_indicator: ^1.1.0
-            flutter_screenutil: ^5.9.0
-            google_fonts: ^6.1.0
-
-          dev_dependencies:
-            flutter_test:
-              sdk: flutter
-            flutter_lints: ^3.0.1
-
-          flutter:
-            uses-material-design: true
-          YAML
-
-      - name: Create asset directories
-        run: |
-          mkdir -p assets/images assets/icons/svg assets/animations assets/fonts
-
-      - name: Create .env from secrets
-        run: |
-          cat > .env << 'ENV'
-          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
-          MAP_API_KEY=${{ secrets.MAP_API_KEY }}
-          ENV
-
-      - name: Fix Kotlin version to 1.7.1
-        run: |
-          sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.7.1"/' android/build.gradle
-          grep -q "ext.kotlin_version" android/build.gradle || sed -i '/buildscript {/a \    ext.kotlin_version = "1.7.1"' android/build.gradle
-
-      - name: Fix gradle and desugaring
-        run: |
-          echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.9-all.zip" > android/gradle/wrapper/gradle-wrapper.properties
-          
-          cat >> android/app/build.gradle << 'GRADLE'
-
-          android {
-              compileOptions {
-                  sourceCompatibility JavaVersion.VERSION_1_8
-                  targetCompatibility JavaVersion.VERSION_1_8
-                  coreLibraryDesugaringEnabled true
-              }
-          }
-
-          dependencies {
-              coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
-          }
-          GRADLE
-
-      - name: Get dependencies
-        run: flutter pub get
-
-      - name: Build APK
-        run: flutter build apk --release --split-per-abi
+          # 6. بناء التطبيق
+          flutter build apk --release --split-per-abi
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
