@@ -32,11 +32,11 @@ jobs:
           cp -r /tmp/code/lib/* lib/
           if [ -d /tmp/code/assets ]; then cp -r /tmp/code/assets/* assets/; fi
 
-      - name: Create complete pubspec.yaml with all dependencies
+      - name: Create complete pubspec.yaml
         run: |
           cat > pubspec.yaml << 'YAML'
           name: kimi_alfa
-          description: Kimi Alfa - Yemeni E-Commerce Platform
+          description: Kimi Alfa Marketplace
           publish_to: 'none'
           version: 1.0.0+1
 
@@ -80,36 +80,40 @@ jobs:
 
           flutter:
             uses-material-design: true
-            fonts:
-              - family: Changa
-                fonts:
-                  - asset: assets/fonts/Changa-SemiBold.ttf
-                    weight: 600
-            assets:
-              - assets/images/
-              - assets/icons/svg/
-              - assets/animations/
-              - .env
           YAML
 
-      - name: Create asset directories and dummy files
+      - name: Create asset directories
         run: |
           mkdir -p assets/images assets/icons/svg assets/animations assets/fonts
-          echo "test" > assets/images/.gitkeep
-          echo "test" > assets/icons/svg/.gitkeep
-          echo "test" > assets/animations/.gitkeep
-          echo "test" > assets/fonts/.gitkeep
-          echo "SUPABASE_URL=https://example.com" > .env
-          echo "SUPABASE_ANON_KEY=test-key" >> .env
 
-      - name: Fix gradle version
+      - name: Create .env file
         run: |
+          cat > .env << 'ENV'
+          SUPABASE_URL=https://ziqphodxtempsunnhlkm.supabase.co
+          SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppcXBvaGR4dGVtc211bm5obGttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3ODQzNDcsImV4cCI6MjA4NzM2MDM0N30.ABAg5YZSrrAtBTWATJ3eRTmo4BuZVyVlrMV1HZjRWs0
+          MAP_API_KEY=efbc36e3-fdd1-428c-a96d-0dd8038fadb1
+          ENV
+
+      - name: Fix gradle and desugaring
+        run: |
+          # Update gradle wrapper
           echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.9-all.zip" > android/gradle/wrapper/gradle-wrapper.properties
+          
+          # Fix build.gradle with proper desugaring
+          cat >> android/app/build.gradle << 'GRADLE'
 
-      - name: Add desugaring
-        run: |
-          sed -i '/android {/a \    compileOptions {\n        sourceCompatibility JavaVersion.VERSION_1_8\n        targetCompatibility JavaVersion.VERSION_1_8\n        coreLibraryDesugaringEnabled true\n    }' android/app/build.gradle
-          sed -i '/dependencies {/a \    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"' android/app/build.gradle
+          android {
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_1_8
+                  targetCompatibility JavaVersion.VERSION_1_8
+                  coreLibraryDesugaringEnabled true
+              }
+          }
+
+          dependencies {
+              coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
+          }
+          GRADLE
 
       - name: Get dependencies
         run: flutter pub get
