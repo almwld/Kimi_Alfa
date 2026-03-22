@@ -13,7 +13,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0'
+          flutter-version: '3.18.0'
 
       - name: Build
         run: |
@@ -40,7 +40,7 @@ jobs:
           # إنشاء مجلدات الأصول الأساسية (لضمان وجودها)
           mkdir -p assets/images assets/icons/svg assets/animations assets/fonts
           
-          # حذف قسم fonts بالكامل من pubspec.yaml (لأن الخط غير موجود)
+          # حذف قسم fonts بالكامل من pubspec.yaml (لتجنب خطأ الخط المفقود)
           sed -i '/fonts:/,/family: Changa/d' pubspec.yaml
           
           # حذف cache Gradle بالكامل لضمان عدم استخدام Kotlin 1.9.0
