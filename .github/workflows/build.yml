@@ -17,25 +17,38 @@ jobs:
 
       - name: Build
         run: |
-          # 1. حفظ الكود (lib و pubspec.yaml)
+          # 1. حفظ الكود
           mkdir /tmp/my_code
           cp -r lib /tmp/my_code/
           cp pubspec.yaml /tmp/my_code/
 
-          # 2. حذف مجلد android القديم نهائياً
+          # 2. حذف كل شيء قديم
           rm -rf android ios linux macos web windows
 
-          # 3. إنشاء مشروع جديد (سيُنشئ android بإعدادات نظيفة)
+          # 3. إنشاء مشروع جديد
           flutter create --org com.kimialfa --project-name kimi_alfa .
 
-          # 4. استعادة الكود الخاص بك
+          # 4. استعادة الكود
           cp -r /tmp/my_code/lib/* lib/
           cp /tmp/my_code/pubspec.yaml .
 
-          # 5. تثبيت الحزم
+          # 5. إنشاء مجلدات assets المطلوبة
+          mkdir -p assets/images assets/icons/svg assets/animations assets/fonts
+          echo "test" > assets/images/.gitkeep
+          echo "test" > assets/icons/svg/.gitkeep
+          echo "test" > assets/animations/.gitkeep
+          echo "test" > assets/fonts/.gitkeep
+
+          # 6. تحديث pubspec.yaml ليشمل المجلدات
+          sed -i '/uses-material-design: true/a \  assets:\n    - assets/images/\n    - assets/icons/svg/\n    - assets/animations/\n    - assets/fonts/' pubspec.yaml
+
+          # 7. إزالة خطوط fonts إذا كانت موجودة وتسبب مشاكل
+          sed -i '/fonts:/,/family: Changa/d' pubspec.yaml
+
+          # 8. تثبيت الحزم
           flutter pub get
 
-          # 6. بناء التطبيق
+          # 9. بناء التطبيق
           flutter build apk --release --split-per-abi
 
       - name: Upload APK
