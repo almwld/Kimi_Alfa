@@ -13,21 +13,21 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.0'
+          flutter-version: '3.19.0'
 
       - name: Build
         run: |
-          # حفظ الكود
+          # حفظ الكود والملفات الأساسية
           mkdir /tmp/code
           cp -r lib /tmp/code/
           cp pubspec.yaml /tmp/code/
           cp -r assets /tmp/code/ 2>/dev/null || true
           cp .env /tmp/code/ 2>/dev/null || true
           
-          # حذف android/ios القديمة
+          # حذف مجلدات android/ios القديمة
           rm -rf android ios
           
-          # إنشاء مشروع جديد
+          # إنشاء مشروع Flutter جديد (لإعادة إنشاء android/ios)
           flutter create --org com.kimialfa --project-name kimi_alfa .
           
           # استعادة الكود
@@ -37,16 +37,19 @@ jobs:
           cp /tmp/code/pubspec.yaml .
           cp /tmp/code/.env . 2>/dev/null || true
           
-          # إنشاء مجلدات الأصول
+          # إنشاء مجلدات الأصول الأساسية (لضمان وجودها)
           mkdir -p assets/images assets/icons/svg assets/animations assets/fonts
           
-          # إزالة قسم fonts من pubspec.yaml (لتجنب خطأ الخط)
+          # حذف قسم fonts بالكامل من pubspec.yaml (لأن الخط غير موجود)
           sed -i '/fonts:/,/family: Changa/d' pubspec.yaml
+          
+          # حذف cache Gradle بالكامل لضمان عدم استخدام Kotlin 1.9.0
+          rm -rf ~/.gradle/caches/
           
           # إضافة flutterEmbedding
           sed -i '/<application>/a \        <meta-data android:name="flutterEmbedding" android:value="2" />' android/app/src/main/AndroidManifest.xml
           
-          # بناء
+          # تثبيت الحزم وبناء APK
           flutter pub get
           flutter build apk --release --split-per-abi
 
