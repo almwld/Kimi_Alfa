@@ -20,7 +20,7 @@ jobs:
         run: |
           mkdir /tmp/code
           cp -r lib pubspec.yaml /tmp/code/
-          [ -d assets ] && cp -r assets /tmp/code/ || true
+          if [ -d assets ]; then cp -r assets /tmp/code/; fi
 
       - name: Clean and recreate project
         run: |
@@ -31,13 +31,13 @@ jobs:
         run: |
           cp -r /tmp/code/lib/* lib/
           cp /tmp/code/pubspec.yaml .
-          [ -d /tmp/code/assets ] && cp -r /tmp/code/assets/* assets/ || true
+          if [ -d /tmp/code/assets ]; then cp -r /tmp/code/assets/* assets/; fi
 
       - name: Fix dependencies
         run: |
           echo 'dependencies {
-    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"
-}' >> android/app/build.gradle
+              coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"
+          }' >> android/app/build.gradle
 
       - name: Get dependencies
         run: flutter pub get
