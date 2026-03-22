@@ -13,7 +13,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.18.0'
+          flutter-version: '3.22.0'
 
       - name: Build
         run: |
@@ -42,6 +42,40 @@ jobs:
           
           # حذف قسم fonts بالكامل من pubspec.yaml (لتجنب خطأ الخط المفقود)
           sed -i '/fonts:/,/family: Changa/d' pubspec.yaml
+          
+          # فرض Kotlin 1.7.1 وتحديث Gradle
+          cat > android/build.gradle << 'GRADLE'
+          buildscript {
+              ext.kotlin_version = '1.7.1'
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:7.4.0'
+                  classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+              }
+          }
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.buildDir = '../build'
+          subprojects {
+              project.buildDir = "${rootProject.buildDir}/${project.name}"
+          }
+          subprojects {
+              project.evaluationDependsOn(':app')
+          }
+          tasks.register("clean", Delete) {
+              delete rootProject.buildDir
+          }
+          GRADLE
+          
+          # تحديث gradle-wrapper.properties
+          echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.0-all.zip" > android/gradle/wrapper/gradle-wrapper.properties
           
           # حذف cache Gradle بالكامل لضمان عدم استخدام Kotlin 1.9.0
           rm -rf ~/.gradle/caches/
