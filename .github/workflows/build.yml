@@ -17,18 +17,25 @@ jobs:
 
       - name: Build
         run: |
-          mkdir /tmp/my_code
-          cp -r lib /tmp/my_code/
-          rm -rf android ios
+          # إنشاء مجلد مؤقت
+          mkdir -p /tmp/clean_project
+          
+          # إنشاء مشروع Flutter نظيف
+          cd /tmp/clean_project
           flutter create --org com.kimialfa --project-name kimi_alfa .
-          cp -r /tmp/my_code/lib/* lib/
-          cat > pubspec.yaml << 'YAML'
+          
+          # نسخ مجلد android النظيف إلى المشروع
+          cd $GITHUB_WORKSPACE
+          rm -rf android
+          cp -r /tmp/clean_project/android .
+          
+          # إنشاء pubspec.yaml بسيط
+          cat > pubspec.yaml << 'EOF'
           name: kimi_alfa
           description: Kimi Alfa
-          publish_to: 'none'
           version: 1.0.0+1
           environment:
-            sdk: '>=3.0.0 <4.0.0'
+            sdk: ">=3.0.0 <4.0.0"
           dependencies:
             flutter:
               sdk: flutter
@@ -38,9 +45,106 @@ jobs:
               sdk: flutter
           flutter:
             uses-material-design: true
-          YAML
+          EOF
+          
+          # تحديث build.gradle
+          cat > android/build.gradle << 'GRADLE'
+          buildscript {
+              ext.kotlin_version = '1.9.22'
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:8.1.0'
+                  classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+              }
+          }
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.buildDir = '../build'
+          subprojects {
+              project.buildDir = "${rootProject.buildDir}/${project.name}"
+          }
+          subprojects {
+              project.evaluationDependsOn(':app')
+          }
+          tasks.register("clean", Delete) {
+              delete rootProject.buildDir
+          }
+          GRADLE
+          
+          # تحديث app/build.gradle
+          cat > android/app/build.gradle << 'APP'
+          apply plugin: 'com.android.application'
+          apply plugin: 'kotlin-android'
+          apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
+          
+          android {
+              compileSdkVersion 34
+              defaultConfig {
+                  applicationId "com.kimialfa.kimi_alfa"
+                  minSdkVersion 21
+                  targetSdkVersion 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_1_8
+                  targetCompatibility JavaVersion.VERSION_1_8
+              }
+          }
+          
+          flutter {
+              source '../..'
+          }
+          
+          dependencies {
+              implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+          }
+          APP
+          
+          # تحديث gradle wrapper
+          echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.0-all.zip" > android/gradle/wrapper/gradle-wrapper.properties
+          
+          # إنشاء MainActivity.kt
+          mkdir -p android/app/src/main/kotlin/com/kimialfa/kimi_alfa
+          cat > android/app/src/main/kotlin/com/kimialfa/kimi_alfa/MainActivity.kt << 'KT'
+          package com.kimialfa.kimi_alfa
+          import io.flutter.embedding.android.FlutterActivity
+          class MainActivity: FlutterActivity()
+          KT
+          
+          # تحديث AndroidManifest.xml
+          cat > android/app/src/main/AndroidManifest.xml << 'MANIFEST'
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <application
+                  android:label="Kimi Alfa"
+                  android:name="${applicationName}"
+                  android:icon="@mipmap/ic_launcher">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:launchMode="singleTop"
+                      android:theme="@style/LaunchTheme">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN"/>
+                          <category android:name="android.intent.category.LAUNCHER"/>
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          MANIFEST
+          
+          # تثبيت الحزم
           flutter pub get
-          flutter build apk --release --split-per-abi
+          
+          # بناء APK
+          flutter build apk --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
