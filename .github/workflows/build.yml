@@ -13,172 +13,50 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.0'
+          flutter-version: '3.16.0'
 
       - name: Build
         run: |
-          # حفظ الكود
-          mkdir /tmp/real_code
-          cp -r lib /tmp/real_code/
-          cp pubspec.yaml /tmp/real_code/ 2>/dev/null || true
+          # حفظ lib فقط
+          mkdir /tmp/lib
+          cp -r lib /tmp/lib/
           
           # حذف كل شيء
-          rm -rf .gitignore android ios linux macos web windows
+          rm -rf android ios
           
-          # إنشاء مشروع Flutter جديد نظيف
+          # إنشاء مشروع جديد
           flutter create --org com.kimialfa --project-name kimi_alfa .
           
-          # استعادة الكود
+          # استعادة lib
           rm -rf lib
-          cp -r /tmp/real_code/lib .
+          cp -r /tmp/lib/lib .
           
-          # إنشاء مجلدات assets
-          mkdir -p assets/images assets/icons/svg assets/animations assets/fonts
-          
-          # إنشاء pubspec.yaml بسيط
+          # إنشاء pubspec.yaml بسيط مع الحزم الأساسية فقط
           cat > pubspec.yaml << 'YAML'
           name: kimi_alfa
           description: Kimi Alfa
           publish_to: 'none'
           version: 1.0.0+1
-
+          
           environment:
-            sdk: '>=3.4.0 <4.0.0'
-
+            sdk: ">=3.0.0 <4.0.0"
+          
           dependencies:
             flutter:
               sdk: flutter
             cupertino_icons: ^1.0.6
-            provider: ^6.1.1
-            supabase_flutter: ^2.0.0
-
+          
           dev_dependencies:
             flutter_test:
               sdk: flutter
-            flutter_lints: ^3.0.0
-
+          
           flutter:
             uses-material-design: true
-            assets:
-              - assets/images/
           YAML
           
-          # إعادة كتابة build.gradle بالكامل
-          cat > android/build.gradle << 'GRADLE'
-          buildscript {
-              ext.kotlin_version = '1.7.1'
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-
-              dependencies {
-                  classpath 'com.android.tools.build:gradle:7.4.0'
-                  classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-              }
-          }
-
-          allprojects {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
-
-          rootProject.buildDir = '../build'
-          subprojects {
-              project.buildDir = "${rootProject.buildDir}/${project.name}"
-          }
-          subprojects {
-              project.evaluationDependsOn(':app')
-          }
-
-          tasks.register("clean", Delete) {
-              delete rootProject.buildDir
-          }
-          GRADLE
-          
-          # إعادة كتابة app/build.gradle
-          cat > android/app/build.gradle << 'APP'
-          def localProperties = new Properties()
-          def localPropertiesFile = rootProject.file('local.properties')
-          if (localPropertiesFile.exists()) {
-              localPropertiesFile.withReader('UTF-8') { reader ->
-                  localProperties.load(reader)
-              }
-          }
-
-          def flutterRoot = localProperties.getProperty('flutter.sdk')
-          if (flutterRoot == null) {
-              throw new GradleException("Flutter SDK not found.")
-          }
-
-          def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
-          if (flutterVersionCode == null) {
-              flutterVersionCode = '1'
-          }
-
-          def flutterVersionName = localProperties.getProperty('flutter.versionName')
-          if (flutterVersionName == null) {
-              flutterVersionName = '1.0'
-          }
-
-          apply plugin: 'com.android.application'
-          apply plugin: 'kotlin-android'
-          apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
-
-          android {
-              compileSdk 34
-              ndkVersion flutter.ndkVersion
-
-              compileOptions {
-                  sourceCompatibility JavaVersion.VERSION_1_8
-                  targetCompatibility JavaVersion.VERSION_1_8
-              }
-
-              kotlinOptions {
-                  jvmTarget = '1.8'
-              }
-
-              sourceSets {
-                  main.java.srcDirs += 'src/main/kotlin'
-              }
-
-              defaultConfig {
-                  applicationId "com.kimialfa.kimi_alfa"
-                  minSdk 21
-                  targetSdk 34
-                  versionCode flutterVersionCode.toInteger()
-                  versionName flutterVersionName
-              }
-
-              buildTypes {
-                  release {
-                      signingConfig signingConfigs.debug
-                  }
-              }
-          }
-
-          flutter {
-              source '../..'
-          }
-
-          dependencies {
-              implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-          }
-          APP
-          
-          # تحديث gradle wrapper
-          echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-7.6-all.zip" > android/gradle/wrapper/gradle-wrapper.properties
-          
-          # إضافة flutterEmbedding
-          sed -i '/<application>/a \        <meta-data android:name="flutterEmbedding" android:value="2" />' android/app/src/main/AndroidManifest.xml
-          
-          # تثبيت الحزم
+          # بناء مباشر
           flutter pub get
-          
-          # بناء APK
-          flutter build apk --release --split-per-abi
+          flutter build apk --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
