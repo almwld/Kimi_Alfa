@@ -2,51 +2,55 @@ name: Build APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.22.0'
-
-      - name: Save user code
-        run: |
-          mkdir /tmp/code
-          cp -r lib pubspec.yaml /tmp/code/
-          if [ -d assets ]; then cp -r assets /tmp/code/; fi
-
-      - name: Clean and recreate project
-        run: |
-          rm -rf android ios linux macos web windows .gitignore
-          flutter create --org com.kimialfa --project-name kimi_alfa .
-
-      - name: Restore code
-        run: |
-          cp -r /tmp/code/lib/* lib/
-          cp /tmp/code/pubspec.yaml .
-          if [ -d /tmp/code/assets ]; then cp -r /tmp/code/assets/* assets/; fi
-
-      - name: Fix dependencies
-        run: |
-          echo 'dependencies {
-              coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"
-          }' >> android/app/build.gradle
-
-      - name: Get dependencies
-        run: flutter pub get
-
-      - name: Build APK
-        run: flutter build apk --release --split-per-abi
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release
-          path: build/app/outputs/flutter-apk/*.apk
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+    
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.22.0'
+        channel: 'stable'
+    
+    - name: Clean build cache
+      run: |
+        flutter clean
+        rm -rf build
+        rm -rf .dart_tool
+        rm -f pubspec.lock
+    
+    - name: Install dependencies
+      run: flutter pub get
+    
+    - name: Verify theme file
+      run: |
+        echo "Checking app_theme.dart for CardThemeData..."
+        if grep -q "CardThemeData" lib/theme/app_theme.dart; then
+          echo "ERROR: Found CardThemeData in app_theme.dart"
+          exit 1
+        else
+          echo "OK: No CardThemeData found"
+        fi
+    
+    - name: Build APK
+      run: flutter build apk --release --split-per-abi
+    
+    - name: Upload APK artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: apk-files
+        path: build/app/outputs/flutter-apk/*.apk
+        retention-days: 7
