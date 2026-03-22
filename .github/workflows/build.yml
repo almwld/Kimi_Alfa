@@ -33,18 +33,33 @@ jobs:
           cp /tmp/code/pubspec.yaml .
           if [ -d /tmp/code/assets ]; then cp -r /tmp/code/assets/* assets/; fi
 
+      - name: Create missing asset directories
+        run: |
+          mkdir -p assets/images assets/icons/svg assets/animations assets/fonts
+          touch assets/images/.gitkeep
+          touch assets/icons/svg/.gitkeep
+          touch assets/animations/.gitkeep
+          touch assets/fonts/.gitkeep
+
+      - name: Update pubspec.yaml (remove problematic assets)
+        run: |
+          # إزالة الأسطر التي تسبب مشاكل
+          sed -i '/assets\/images\//d' pubspec.yaml
+          sed -i '/assets\/icons\/svg\//d' pubspec.yaml
+          sed -i '/assets\/animations\//d' pubspec.yaml
+          sed -i '/assets\/fonts\//d' pubspec.yaml
+          
+          # إضافة assets بسيطة
+          sed -i '/flutter:/a \  assets:\n    - assets/images/\n    - assets/icons/svg/\n    - assets/animations/\n    - assets/fonts/' pubspec.yaml
+
       - name: Fix gradle version
         run: |
-          # تحديث gradle إلى 8.9
-          sed -i 's/gradle-8.[0-9]*-all.zip/gradle-8.9-all.zip/g' android/gradle/wrapper/gradle-wrapper.properties
-          # أو كتابة الإصدار مباشرة
           echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.9-all.zip" > android/gradle/wrapper/gradle-wrapper.properties
 
-      - name: Fix dependencies
+      - name: Add desugaring
         run: |
-          echo 'dependencies {
-              coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"
-          }' >> android/app/build.gradle
+          sed -i '/android {/a \    compileOptions {\n        sourceCompatibility JavaVersion.VERSION_1_8\n        targetCompatibility JavaVersion.VERSION_1_8\n        coreLibraryDesugaringEnabled true\n    }' android/app/build.gradle
+          sed -i '/dependencies {/a \    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"' android/app/build.gradle
 
       - name: Get dependencies
         run: flutter pub get
