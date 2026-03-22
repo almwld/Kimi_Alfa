@@ -32,7 +32,7 @@ jobs:
           cp -r /tmp/code/lib/* lib/
           if [ -d /tmp/code/assets ]; then cp -r /tmp/code/assets/* assets/; fi
 
-      - name: Create complete pubspec.yaml
+      - name: Create pubspec.yaml
         run: |
           cat > pubspec.yaml << 'YAML'
           name: kimi_alfa
@@ -86,20 +86,18 @@ jobs:
         run: |
           mkdir -p assets/images assets/icons/svg assets/animations assets/fonts
 
-      - name: Create .env file
+      - name: Create .env from secrets
         run: |
           cat > .env << 'ENV'
-          SUPABASE_URL=https://ziqphodxtempsunnhlkm.supabase.co
-          SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppcXBvaGR4dGVtc211bm5obGttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3ODQzNDcsImV4cCI6MjA4NzM2MDM0N30.ABAg5YZSrrAtBTWATJ3eRTmo4BuZVyVlrMV1HZjRWs0
-          MAP_API_KEY=efbc36e3-fdd1-428c-a96d-0dd8038fadb1
+          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          MAP_API_KEY=${{ secrets.MAP_API_KEY }}
           ENV
 
       - name: Fix gradle and desugaring
         run: |
-          # Update gradle wrapper
           echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.9-all.zip" > android/gradle/wrapper/gradle-wrapper.properties
           
-          # Fix build.gradle with proper desugaring
           cat >> android/app/build.gradle << 'GRADLE'
 
           android {
