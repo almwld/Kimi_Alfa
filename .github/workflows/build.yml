@@ -13,7 +13,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0'
+          flutter-version: '3.22.0'
 
       - name: Build
         run: |
@@ -31,7 +31,7 @@ jobs:
           rm -rf lib
           cp -r /tmp/code/lib .
           
-          # إنشاء pubspec.yaml بسيط
+          # إنشاء pubspec.yaml بدون path_provider
           cat > pubspec.yaml << 'YAML'
           name: kimi_alfa
           description: Kimi Alfa
@@ -39,7 +39,7 @@ jobs:
           version: 1.0.0+1
 
           environment:
-            sdk: '>=3.0.0 <4.0.0'
+            sdk: '>=3.4.0 <4.0.0'
 
           dependencies:
             flutter:
@@ -63,9 +63,6 @@ jobs:
           SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
           MAP_API_KEY=${{ secrets.MAP_API_KEY }}
           ENV
-          
-          # تنظيف cache Gradle
-          rm -rf ~/.gradle/caches/
           
           # إضافة flutterEmbedding
           sed -i '/<application>/a \        <meta-data android:name="flutterEmbedding" android:value="2" />' android/app/src/main/AndroidManifest.xml
