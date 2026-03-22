@@ -1,4 +1,4 @@
-name: Build Flx
+name: Build APK
 
 on:
   push:
@@ -13,114 +13,47 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.0'   # إصدار ثابت ومتوافق مع path_provider
+          flutter-version: '3.22.0'
 
-      - name: Create fresh Flutter project
+      - name: Build
         run: |
-          mkdir -p /tmp/fresh
-          cd /tmp/fresh
-          flutter create --org com.flexyemen --project-name fresh_project .
-          cd $GITHUB_WORKSPACE
-          cp -r lib /tmp/fresh/
-          cp -r assets /tmp/fresh/ 2>/dev/null || true
-          cp pubspec.yaml /tmp/fresh/
-          cp .env /tmp/fresh/ 2>/dev/null || true
-          rm -rf lib assets pubspec.yaml .env android ios
-          cp -r /tmp/fresh/. .
-          rm -rf /tmp/fresh
-
-      - name: Prepare assets and fix fonts
-        run: |
-          # إنشاء مجلدات assets المطلوبة لتجنب أخطاء "asset not found"
+          # حفظ الكود والملفات الأساسية
+          mkdir /tmp/code
+          cp -r lib /tmp/code/
+          cp pubspec.yaml /tmp/code/
+          cp -r assets /tmp/code/ 2>/dev/null || true
+          cp .env /tmp/code/ 2>/dev/null || true
+          
+          # حذف مجلدات android/ios القديمة
+          rm -rf android ios
+          
+          # إنشاء مشروع Flutter جديد (لإعادة إنشاء android/ios)
+          flutter create --org com.kimialfa --project-name kimi_alfa .
+          
+          # استعادة الكود
+          rm -rf lib assets
+          cp -r /tmp/code/lib .
+          cp -r /tmp/code/assets . 2>/dev/null || true
+          cp /tmp/code/pubspec.yaml .
+          cp /tmp/code/.env . 2>/dev/null || true
+          
+          # إنشاء مجلدات الأصول الأساسية
           mkdir -p assets/images assets/icons/svg assets/animations assets/fonts
-          # حذف قسم fonts من pubspec.yaml (لأن الخط قد لا يكون موجوداً في المسار الصحيح)
+          
+          # حذف قسم fonts من pubspec.yaml (لتجنب خطأ الملف المفقود)
           sed -i '/fonts:/,/family: Changa/d' pubspec.yaml
-
-      - name: Update AGP version
-        run: |
-          if [ -f android/settings.gradle ]; then
-            sed -i 's/id "com.android.application" version "8.1.0"/id "com.android.application" version "8.1.1"/g' android/settings.gradle
-            echo "✅ Updated AGP to 8.1.1"
-          else
-            echo "⚠️ android/settings.gradle not found"
-          fi
-
-      - name: Set app name
-        run: |
-          sed -i 's/android:label="fresh_project"/android:label="Flex Yemen Market"/g' android/app/src/main/AndroidManifest.xml
-
-      - name: Create fresh Flutter project
-        run: |
-          mkdir -p /tmp/fresh
-          cd /tmp/fresh
-          flutter create --org com.flexyemen --project-name fresh_project .
-          cd $GITHUB_WORKSPACE
-          cp -r lib /tmp/fresh/
-          cp -r assets /tmp/fresh/ 2>/dev/null || true
-          cp pubspec.yaml /tmp/fresh/
-          cp .env /tmp/fresh/ 2>/dev/null || true
-          rm -rf lib assets pubspec.yaml .env android ios
-          cp -r /tmp/fresh/. .
-          rm -rf /tmp/fresh
-
-      - name: Prepare assets and fix fonts
-        run: |
-          mkdir -p assets/images assets/icons/svg assets/animations assets/fonts
-          # إزالة قسم fonts من pubspec.yaml
-          sed -i '/fonts:/,/family: Changa/d' pubspec.yaml
-
-      - name: Force Kotlin 1.7.1 and clean Gradle cache
-        run: |
-          # إعادة كتابة build.gradle ب Kotlin 1.7.1
-          cat > android/build.gradle << 'GRADLE'
-          buildscript {
-              ext.kotlin_version = '1.7.1'
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-              dependencies {
-                  classpath 'com.android.tools.build:gradle:7.4.0'
-                  classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-              }
-          }
-          allprojects {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
-          rootProject.buildDir = '../build'
-          subprojects {
-              project.buildDir = "${rootProject.buildDir}/${project.name}"
-          }
-          subprojects {
-              project.evaluationDependsOn(':app')
-          }
-          tasks.register("clean", Delete) {
-              delete rootProject.buildDir
-          }
-          GRADLE
-
-          # تحديث gradle-wrapper إلى 8.0
-          echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.0-all.zip" > android/gradle/wrapper/gradle-wrapper.properties
-
-          # حذف cache Gradle بالكامل (لإزالة Kotlin 1.9.0)
+          
+          # حذف cache Gradle بالكامل لإزالة أي بقايا من Kotlin 1.7.1
           rm -rf ~/.gradle/caches/
-          rm -rf .gradle/
-
-      - name: Set app name and embedding
-        run: |
-          sed -i 's/android:label="fresh_project"/android:label="Flex Yemen Market"/g' android/app/src/main/AndroidManifest.xml
+          
+          # إضافة flutterEmbedding
           sed -i '/<application>/a \        <meta-data android:name="flutterEmbedding" android:value="2" />' android/app/src/main/AndroidManifest.xml
+          
+          # بناء
+          flutter pub get
+          flutter build apk --release --split-per-abi
 
-      - name: Get dependencies
-        run: flutter pub get
-
-      - name: Build APK (split-per-abi)
-        run: flutter build apk --release --split-per-abi
-
-      - name: Upload APKs
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-release
