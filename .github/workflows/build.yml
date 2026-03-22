@@ -20,7 +20,6 @@ jobs:
         run: |
           mkdir /tmp/code
           cp -r lib /tmp/code/
-          if [ -d assets ]; then cp -r assets /tmp/code/; fi
 
       - name: Clean and recreate project
         run: |
@@ -28,15 +27,13 @@ jobs:
           flutter create --org com.kimialfa --project-name kimi_alfa .
 
       - name: Restore code
-        run: |
-          cp -r /tmp/code/lib/* lib/
-          if [ -d /tmp/code/assets ]; then cp -r /tmp/code/assets/* assets/; fi
+        run: cp -r /tmp/code/lib/* lib/
 
-      - name: Create fresh pubspec.yaml
+      - name: Create pubspec.yaml
         run: |
           cat > pubspec.yaml << 'YAML'
           name: kimi_alfa
-          description: Kimi Alfa Marketplace
+          description: Kimi Alfa
           publish_to: 'none'
           version: 1.0.0+1
 
@@ -46,34 +43,14 @@ jobs:
           dependencies:
             flutter:
               sdk: flutter
-            cupertino_icons: ^1.0.6
-            provider: ^6.1.1
-            supabase_flutter: ^2.0.0
 
           dev_dependencies:
             flutter_test:
               sdk: flutter
-            flutter_lints: ^3.0.0
 
           flutter:
             uses-material-design: true
           YAML
-
-      - name: Create asset directories
-        run: |
-          mkdir -p assets/images assets/icons/svg assets/animations assets/fonts
-
-      - name: Fix gradle version
-        run: |
-          echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.9-all.zip" > android/gradle/wrapper/gradle-wrapper.properties
-
-      - name: Add desugaring
-        run: |
-          sed -i '/android {/a \    compileOptions {\n        sourceCompatibility JavaVersion.VERSION_1_8\n        targetCompatibility JavaVersion.VERSION_1_8\n        coreLibraryDesugaringEnabled true\n    }' android/app/build.gradle
-          sed -i '/dependencies {/a \    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"' android/app/build.gradle
-
-      - name: Get dependencies
-        run: flutter pub get
 
       - name: Build APK
         run: flutter build apk --release --split-per-abi
